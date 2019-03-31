@@ -1,6 +1,6 @@
 bl_info = {
     'name': 'Lighting Toolkit for Blender',
-	'author': 'Jorge Sanchez Salcedo',
+    'author': 'Jorge Sanchez Salcedo',
     'version': (1, 2, 0),
     'blender': (2, 79, 7),
     'category': 'Lighting'
