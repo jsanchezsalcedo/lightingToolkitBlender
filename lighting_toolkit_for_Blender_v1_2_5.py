@@ -398,7 +398,7 @@ class RENDER_OT_RenderSettings(Operator):
         getPath = bpy.path.abspath('//')
         renderFilePath = getPath.replace('\\','/')
         renderFileName = os.path.join(renderFilePath, 'batch_render.bat')
-        renderPath = os.path.join(renderFilePath, 'render_test/')
+        renderPath = os.path.join(renderFilePath, 'render/')
 
         commandLine = 'blender -b "' + filePath + '" -o "' + renderPath + '" -F MULTILAYER -t=0'
 
