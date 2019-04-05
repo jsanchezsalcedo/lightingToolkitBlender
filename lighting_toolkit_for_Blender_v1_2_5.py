@@ -258,38 +258,6 @@ class VIEW_PT_LightingToolkit(Panel):
         self.layout.operator("lamp.view_from_selected", text="View from selected")
         self.layout.prop(wm, "isolate_toggle_button", text=label, toggle=True)
 
-class RENDER_OT_BatchRender(Operator):
-    bl_idname = 'render.batch_render'
-    bl_label = 'Batch Render File'
-    bl_options = {"REGISTER", "UNDO"}
-        
-    def execute(self, context):
-        getPath = bpy.app.binary_path
-        blenderPath = getPath.split('blender.exe')[0]
-        blenderPath = blenderPath.replace('\\','/')
-
-        blenderLine = 'cd ' + blenderPath
-
-        getPath = bpy.data.filepath
-        filePath = getPath.replace('\\','/')
-
-        getPath = bpy.path.abspath('//')
-        renderFilePath = getPath.replace('\\','/')
-        renderFileName = os.path.join(renderFilePath, 'batch_render.bat')
-        renderPath = os.path.join(renderFilePath, 'render_test/')
-
-        commandLine = 'blender -b "' + filePath + '" -o "' + renderPath + '" -F MULTILAYER -f 105 -t=0'
-
-        renderfile = open(renderFileName, 'w')
-
-        renderfile.write(blenderLine)
-        renderfile.write('\n')
-        renderfile.write(commandLine)
-
-        renderfile.close()
-                        
-        return{'FINISHED'}
-
 class RENDER_OT_RenderSettings(Operator):
     bl_idname = "render.render_settings"
     bl_label = "Render settings"
@@ -373,7 +341,7 @@ class RENDER_OT_RenderSettings(Operator):
         
 class RENDER_PT_RenderSettings(Panel):
     bl_idname = "panel.renderSettings"
-    bl_label = "Render settings"
+    bl_label = "Render"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
     bl_category = "Lighting Toolkit"
