@@ -406,7 +406,7 @@ class RENDER_OT_RenderSettings(Operator):
 
         renderfile.write(blenderLine)
         renderfile.write('\n')
-        renderfile.write('blender -b "' + filePath + '" -o "' + renderPath + '" -F MULTILAYER ')
+        renderfile.write('blender -b "' + filePath + '" -o "' + renderPath + '" -F MULTILAYER -t=0 ')
         if fr_start == fr_end:
             renderfile.write('-f ' + fr_start)
         else:
