@@ -508,13 +508,13 @@ class RENDER_OT_RenderSettings(Operator):
         renderFileName = os.path.join(renderFilePath, 'batch_render.bat')
         renderPath = os.path.join(renderFilePath, 'render/')
 
-        commandLine = 'blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t=0'
+        commandLine = 'blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t 0'
 
         renderfile = open(renderFileName, 'w')
 
         renderfile.write(blenderLine)
         renderfile.write('\n')
-        renderfile.write('blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t=0 ')
+        renderfile.write('blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t 0 ')
         if fr_start == fr_end:
             renderfile.write('-f ' + fr_start)
         else:
