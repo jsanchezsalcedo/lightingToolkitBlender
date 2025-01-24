@@ -453,8 +453,6 @@ class RENDER_OT_RenderSettings(Operator):
         
 classes = (GetLightType,
            VIEW3D_PT_lightingToolkit,
-           SYNC_OT_Sync_Scenes,
-           EDIT_OT_OptimizeBlendFile,
            CREATE_OT_CreateLight,
            CREATE_OT_CreateLightIntoObjects,
            CREATE_OT_CreateLightFromView,
