@@ -74,7 +74,6 @@ class VIEW3D_PT_lightingToolkit(Panel):
 
         row = layout.row()
         row.label(text='Objects:')
-
         
         row = layout.row()
         row.operator("lt.rename_object", text="Rename")
@@ -84,11 +83,6 @@ class VIEW3D_PT_lightingToolkit(Panel):
         
         row = layout.row()
         row.operator("lamp.duplicate_light", text="Duplicate")
-
-        #label = 'Isolated' if wm.isolate_toggle_button else 'Isolate'
-        
-        #row = layout.row()
-        #row.prop("isolate_toggle_button", text=label, toggle=True)
 
 class SYNC_OT_Sync_Scenes(Operator):
     bl_idname = 'sc.sync_scenes'
@@ -173,11 +167,11 @@ class CREATE_OT_CreateLight(Operator):
         
         if new_collection in bpy.data.collections:
             new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
-            #bpy.ops.object.collection_link(collection=new_collection)
+            bpy.ops.object.collection_link(collection=new_collection)
         else:
             bpy.ops.collection.create(name=new_collection)
             new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
-            #bpy.ops.object.collection_link(collection=new_collection)
+            bpy.ops.object.collection_link(collection=new_collection)
         
         for i in new_light:
             bpy.context.object.name = self.new_name
