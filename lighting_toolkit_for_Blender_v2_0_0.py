@@ -7,56 +7,58 @@ bl_info = {
 }
 
 import bpy
+from bpy.props import StringProperty, EnumProperty, PointerProperty
+from bpy.types import Operator, Panel, PropertyGroup
 
-from bpy.props import (IntProperty,
-                       BoolProperty,
-                       EnumProperty,
-                       StringProperty,
-                       CollectionProperty,
-                       PointerProperty)
+# Utility Functions
+def ensure_collection(name):
+    """Ensure a collection exists, create it if not."""
+    if name not in bpy.data.collections:
+        bpy.data.collections.new(name)
+    return bpy.data.collections[name]
 
-from bpy.types import (Operator,
-                       Panel,
-                       PropertyGroup,
-                       UIList)
-
+# Property Group
 class GetLightType(PropertyGroup):
     bl_idname = 'lt.getLightType'
     bl_label = 'Get Light Type'
-    
-    lamp_combo_box : EnumProperty(name='Lights', items=[
-        ('SUN', 'Sun', ''),    
-        ('AREA', 'Area', ''),    
-        ('POINT', 'Point', ''),    
-        ('SPOT', 'Spot', '')
-        ])
+    bl_description = 'Get the light type'
+    lamp_combo_box: EnumProperty(
+        name='Lights',
+        items=[
+            ('SUN', 'Sun', ''),
+            ('AREA', 'Area', ''),
+            ('POINT', 'Point', ''),
+            ('SPOT', 'Spot', '')
+        ]
+    )
 
-class VIEW3D_PT_lightingToolkit(Panel):
+# Panel
+class VIEW3D_PT_LightingToolkit(Panel):
     bl_label = 'Lighting Toolkit'
     bl_idname = 'VIEW3D_PT_lightingToolkit'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Lighting Toolkit'
-    
+
     def draw(self, context):
-        layout = self.layout
+        layout = self.layout     
         wm = context.window_manager
 
         row = layout.row()
-        row.label(text='Scenes:')
+        layout.label(text='Scenes:')
 
         row = layout.row()
         row.operator("ob.undo", text="Undo")
         row.operator("ob.redo", text="Redo")
 
         row = layout.row()
-        row.separator()
+        layout.separator()
 
         row = layout.row()
         row.prop(context.scene.lamp_combo_box, 'lamp_combo_box')
-        
+
         row = layout.row()
-        row.operator("lt.create_light", text="Create light")
+        row.operator("lt.create_light", text="Create Light")
         
         row = layout.row()
         row.operator("lt.create_light_objects", text="Create light to objects")
@@ -74,118 +76,25 @@ class VIEW3D_PT_lightingToolkit(Panel):
         row.label(text='Objects:')
 
         row = layout.row()
+        row.operator("ob.rename_object", text="Rename")
+
+        row = layout.row()
         row.operator("ob.center_origin_object", text="Center origin to object")
 
         row = layout.row()
         row.operator("ob.add_subdivisions", text="Subdivide")
-
-        row = layout.row()
-        row.operator("ob.rename_object", text="Rename")
-        
-        row = layout.row()
-        row.operator("ob.delete", text="Delete")
         
         row = layout.row()
         row.operator("ob.duplicate", text="Duplicate")
+        
+        row = layout.row()
+        row.operator("ob.delete", text="Delete")
 
         row = layout.row()
         row.operator("ob.hide_object", text="Isolate")
         row.operator("ob.unhide_object", text="Show all")
 
-class SYNC_OT_Sync_Scenes(Operator):
-    bl_idname = 'sc.sync_scenes'
-    bl_label = 'Sync lighting scene'
-    
-    def execute(self, context):
-        lightObs = bpy.data.scenes['Lighting'].objects
-        sceneObs = bpy.data.scenes['Scene'].objects
-        
-        for i in sceneObs:
-            if i.name not in lightObs:
-                bpy.data.objects[i.name].select=True
-                bpy.ops.object.make_links_scene(scene='Lighting')
-        
-        bpy.ops.object.select_all()
-        
-        return{'FINISHED'}                    
-		
-class EDIT_OT_OptimizeBlendFile(Operator):
-    bl_idname = 'sc.optimize_file'
-    bl_label = 'Optimize scene file'
-        
-    def execute(self, context):
-        for camera in bpy.data.cameras:
-            if not camera.users:
-                bpy.data.cameras.remove(camera)
-            else:
-                pass
-        
-        for lamp in bpy.data.lamps:
-            if not lamp.users:
-                bpy.data.lamps.remove(lamp)
-            else:
-                pass
-        
-        for material in bpy.data.materials:
-            if not material.users:
-                bpy.data.materials.remove(material)
-            else:
-                pass
-        
-        for image in bpy.data.images:
-            if not image.users:
-                bpy.data.images.remove(image)
-            else:
-                pass
-        
-        for texture in bpy.data.textures:
-            if not texture.users:
-                bpy.data.textures.remove(texture)
-            else:
-                pass
-        
-        for object in bpy.data.objects:
-            if not object.users:
-                bpy.data.objects.remove(object)
-            else:
-                pass
-        
-        for node in bpy.data.node_groups:
-            if not node.users:
-                bpy.data.node_groups.remove(node)
-            else:
-                pass	
-            
-        for group in bpy.data.groups:
-            if not group.users:
-                bpy.data.groups.remove(node)
-            else:
-                pass			
-            
-        return{'FINISHED'}
-
-class EDIT_OT_ExportUSD(Operator):
-    bl_idname = 'ed.export_usd'
-    bl_label = 'Export USD'
-        
-    def execute(self, context):
-       bpy.ops.wm.usd_export(
-        root_prim_path='/root', 
-        selected_objects_only=False, 
-        visible_objects_only=True,
-        export_animation=False,
-        relative_paths=True, 
-        convert_orientation=True, 
-        export_global_forward_selection='NEGATIVE_Z',
-        export_global_up_selection='Y',
-        xform_op_mode='TRS', 
-        export_custom_properties=True, 
-        custom_properties_namespace='userProperties', 
-        author_blender_name=True,
-        )
-       
-       return{'FINISHED'}
-    
+# Operator  
 class EDIT_OT_Undo(Operator):
     bl_idname = 'ob.undo'
     bl_label = 'Undo'
@@ -203,83 +112,66 @@ class EDIT_OT_Redo(Operator):
         bpy.ops.ed.redo()
                         
         return{'FINISHED'}
-
+    
 class CREATE_OT_CreateLight(Operator):
     bl_idname = 'lt.create_light'
     bl_label = 'Create Light'
-    new_name: StringProperty(name="Name:")
+    #new_name: StringProperty(name="Name:")
 
     def execute(self, context):
-        new_collection = 'Light_Group'
-        lightType = bpy.context.scene.lamp_combo_box.lamp_combo_box
+        light_type = context.scene.lamp_combo_box.lamp_combo_box
+        light_name = light_type.casefold()
+        collection = ensure_collection('Lighting')
         
-        if new_collection in bpy.data.collections:
-            new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
-        else:
-            bpy.ops.collection.create(name=new_collection)
-            new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
+        bpy.ops.object.light_add(type=light_type, location=(0, 0, 0))
         
-        for i in new_light:
-            bpy.context.object.name = self.new_name
-            bpy.context.object.data.name = self.new_name + 'Shape'
+        light = context.object
+        light.name = f"{light_name}.000"
+        light.data.name = f"{light.name}Shape"
         
-        return {"FINISHED"}
+        collection.objects.link(light)
+
+        return {'FINISHED'}
 
     def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        return context.window_manager.invoke_props_dialog(self)
     
 class CREATE_OT_CreateLightIntoObjects(Operator):
     bl_idname = 'lt.create_light_objects'
     bl_label = 'Create Light Into Objects'
-    new_name: StringProperty(name="Name:")
 
     def execute(self, context):
-        new_collection = 'Lighting'
         selected = bpy.context.selected_objects 
-        lightType = bpy.context.scene.lamp_combo_box.lamp_combo_box
+        light_type = bpy.context.scene.lamp_combo_box.lamp_combo_box
+        light_name = light_type.casefold()
+        collection = ensure_collection('Lighting')
+
+        for i in selected:
+            obj_name = i.name
+            loc = i.location
+
+            bpy.ops.object.light_add(type=light_type, location=loc)
         
-        if new_collection in bpy.data.collections:
-            
-            for i in selected:
-                obj_name = i.name
-                new_light_name = self.new_name + '_' + obj_name
-                loc = i.location
-                new_light = bpy.ops.object.light_add(type=lightType, location=loc)
-                bpy.ops.object.collection_link(collection=new_collection)
-                
-                for i in new_light:
-                    bpy.context.object.name = new_light_name
-                    bpy.context.object.data.name = new_light_name + 'Shape'
-                
-        else:
-            bpy.ops.collection.create(name=new_collection)
-            
-            for i in selected:
-                obj_name = i.name
-                new_light_name = self.new_name + '_' + obj_name
-                loc = i.location
-                new_light = bpy.ops.object.light_add(type=lightType, location=loc)
-                bpy.ops.object.collection_link(collection=new_collection)
-                
-                for i in new_light:
-                    bpy.context.object.name = new_light_name
-                    bpy.context.object.data.name = new_light_name + 'Shape'
-                
+            light = context.object
+            light.name = f"{obj_name}_{light_name}"
+            light.data.name = f"{light.name}Shape"
+
+            collection.objects.link(light)  
+
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        return context.window_manager.invoke_props_dialog(self)
 
 class CREATE_OT_CreateLightFromView(Operator):
     bl_idname = 'lt.create_light_view'
     bl_label = 'Create Light From View'
-    new_name = bpy.props.StringProperty(name="Name:")
+    #new_name = bpy.props.StringProperty(name="Name:")
 
     def execute(self, context):
-        new_collection = 'Lighting'
-        lightType = bpy.context.scene.lamp_combo_box.lamp_combo_box
+        light_type = context.scene.lamp_combo_box.lamp_combo_box
+        light_name = light_type.casefold()
+        collection = ensure_collection('Lighting')
         
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
@@ -287,29 +179,23 @@ class CREATE_OT_CreateLightFromView(Operator):
                 if rv3d is not None:            
                     loc = area.spaces[0].region_3d.view_location
                     rot = (area.spaces[0].region_3d.view_rotation).to_euler()
-                    dis = area.spaces[0].region_3d.view_distance 
-
-                    if new_collection in bpy.data.collections:
-                        new_light = bpy.ops.object.light_add(type=lightType, location=loc, rotation=rot)
-                        bpy.ops.object.collection_link(collection=new_collection)                      
-                        
-                    else:
-                        bpy.ops.collection.create(name=new_collection)
-                        new_light = bpy.ops.object.light_add(type=lightType, location=loc, rotation=rot)
-                        bpy.ops.object.collection_link(collection=new_collection)
-                        
-                    for i in new_light:
-                        bpy.context.object.name = self.new_name
-                        bpy.context.object.data.name = self.new_name + 'Shape'
+                    dis = area.spaces[0].region_3d.view_distance
                     
+                    bpy.ops.object.light_add(type=lightType, location=loc, rotation=rot)
+        
+                    light = context.object
+                    light.name = f"{light_name}.000"
+                    light.data.name = f"{light.name}Shape"
+
+                    collection.objects.link(light)  
+
                     bpy.ops.view3d.object_as_camera()
                     bpy.context.space_data.lock_camera = True
                     
         return {"FINISHED"}
 
     def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        return context.window_manager.invoke_props_dialog(self)
         
 class VIEW_OT_ViewFromSelected(Operator):
     bl_idname = 'lt.view_from_selected'
@@ -320,6 +206,76 @@ class VIEW_OT_ViewFromSelected(Operator):
         bpy.context.space_data.lock_camera = False
         
         return {"FINISHED"}
+    
+class EDIT_OT_Rename(Operator):
+    bl_idname = 'ob.rename_object'
+    bl_label = 'Rename'
+    new_name: StringProperty(name="Name:")
+    
+    def execute(self, context):
+        selected = bpy.context.selected_objects
+        #self.report({'INFO'}, new_name)
+
+        for i in selected:
+            obj_name = i.name
+            object = bpy.data.objects[obj_name]
+
+            bpy.context.view_layer.objects.active = object
+            obj = bpy.context.object
+            obj.name = f"{self.new_name}.000"
+            obj.data.name = f"{obj.name}Shape"
+
+        return{'FINISHED'}
+    
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)    
+
+class EDIT_OT_CenterOrigin(Operator):
+    bl_idname = 'ob.center_origin_object'
+    bl_label = 'Hide'
+    
+    def execute(self, context):
+        bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+
+        return{'FINISHED'}
+
+class EDIT_OT_add_subdivions(Operator):
+    bl_idname = "ob.add_subdivisions"
+    bl_label = "Subdivide"
+
+    def execute(self, context):
+        selected = bpy.context.selected_objects
+        
+        for i in selected:
+            obj_name = i.name
+            object = bpy.ops.object
+            objects = bpy.data.objects
+
+            bpy.context.view_layer.objects.active = objects[obj_name]
+
+            object.modifier_add(type='SUBSURF')
+            object.modifier_apply(modifier="Subdivision")
+            object.shade_smooth()
+
+        return{'FINISHED'}
+    
+class EDIT_OT_Duplicate(Operator):
+    bl_idname = 'ob.duplicate'
+    bl_label = 'Duplicate'
+        
+    def execute(self, context):
+        bpy.ops.object.duplicate()
+                        
+        return{'FINISHED'}
+        
+class EDIT_OT_Delete(Operator):
+    bl_idname = 'ob.delete'
+    bl_label = 'Delete'
+        
+    def execute(self, context):
+        bpy.ops.object.delete()
+            
+        return{'FINISHED'}
     
 class EDIT_OT_Hide(Operator):
     bl_idname = 'ob.hide_object'
@@ -339,258 +295,31 @@ class EDIT_OT_Unhide(Operator):
 
         return{'FINISHED'}
 
-class EDIT_OT_CenterOrigin(Operator):
-    bl_idname = 'ob.center_origin_object'
-    bl_label = 'Hide'
-    
-    def execute(self, context):
-        bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
-
-        return{'FINISHED'}
-
-class EDIT_OT_apply_subdivs(Operator):
-    bl_idname = "ob.apply_subdivs"
-    bl_label = "Apply subdivisions"
-
-    def execute(self, context):
-        selected = bpy.context.selected_objects
-        
-        for obj in selected:
-            obj = obj.name
-            object = bpy.ops.object
-            objects = bpy.data.objects
-            bpy.context.view_layer.objects.active = objects[obj]
-            try:
-                if bpy.context.object.modifiers['Subdivision'] == bpy.data.objects[obj].modifiers['Subdivision']:
-                    object.modifier_apply(modifier="Subdivision")
-                    object.shade_smooth()
-            except KeyError:
-                pass
-
-        return{'FINISHED'}
-
-class EDIT_OT_add_subdivions(Operator):
-    bl_idname = "ob.add_subdivisions"
-    bl_label = "Subdivide"
-
-    def execute(self, context):
-        selected = bpy.context.selected_objects
-        
-        for obj in selected:
-            obj = obj.name
-            object = bpy.ops.object
-            objects = bpy.data.objects
-            bpy.context.view_layer.objects.active = objects[obj]
-            object.modifier_add(type='SUBSURF')
-            object.modifier_apply(modifier="Subdivision")
-            object.shade_smooth()
-
-        return{'FINISHED'}
-    
-class EDIT_OT_Rename(Operator):
-    bl_idname = 'ob.rename_object'
-    bl_label = 'Rename'
-    new_name: StringProperty(name="Name:")
-    
-    def execute(self, context):
-        selected = bpy.context.selected_objects
-        message = "{:s}".format(self.new_name)
-        self.report({'INFO'}, message)
-
-        for obj in selected:
-            obj = obj.name
-            object = bpy.data.objects[obj]
-            bpy.context.view_layer.objects.active = object
-            bpy.context.object.name = message
-            bpy.context.object.data.name = message + 'Shape'
-
-        return{'FINISHED'}
-    
-    def invoke(self, context, event):
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
-        
-class EDIT_OT_Delete(Operator):
-    bl_idname = 'ob.delete'
-    bl_label = 'Delete'
-        
-    def execute(self, context):
-        bpy.ops.object.delete()
-            
-        return{'FINISHED'}
-    
-class EDIT_OT_Duplicate(Operator):
-    bl_idname = 'ob.duplicate'
-    bl_label = 'Duplicate'
-        
-    def execute(self, context):
-        bpy.ops.object.duplicate()
-                        
-        return{'FINISHED'}
-  
-class VIEW_OT_IsolateLamps(Operator):
-    bl_idname = 'lamp.isolate_lamps'
-    bl_label = 'Isolate Lamps'
-    
-    def getSceneLamps(self):
-        sceneLamps = []        
-        for obj in bpy.data.objects:
-            if obj.type == 'LAMP':
-                sceneLamps.append(obj)
-            else:
-                pass
-        
-        sceneLampsOn = []        
-        for lamp in sceneLamps:
-            if lamp.hide == False:
-                sceneLampsOn.append(lamp)
-            else:
-                pass
-            
-        return sceneLamps
-    
-    def modal(self, context, event):
-        sceneLamps = self.getSceneLamps()
-        wm = context.window_manager
-        
-        if wm.isolate_toggle_button == True:
-            for lamp in sceneLamps:
-                selected = bpy.context.selected_objects
-                if lamp not in selected:
-                    lamp.hide = True
-                else:
-                    lamp.hide = False
-                    
-        elif wm.isolate_toggle_button == False:
-            context.window_manager.event_timer_remove(self._timer)
-            for lamp in sceneLamps:
-                lamp.hide = False
-            
-            return {'FINISHED'}
-        
-        return {'PASS_THROUGH'}
-    
-    def invoke(self, context, event):
-        self._timer = context.window_manager.event_timer_add(0.01, context.window)
-        context.window_manager.modal_handler_add(self)
-        return{'RUNNING_MODAL'}    
-        
-class RENDER_OT_RenderSettings(Operator):
-    bl_idname = "render.render_settings"
-    bl_label = "Render settings"
-    
-    def execute(self, context):
-        fr_start = str(bpy.context.scene.frame_start)
-        fr_end = str(bpy.context.scene.frame_end)
-        fr_step = str(bpy.context.scene.frame_step)
-        fl_format = str(bpy.context.scene.render.image_settings.file_format)
-        getPath = bpy.app.binary_path
-        blenderPath = getPath.split('blender.exe')[0]
-        blenderPath = blenderPath.replace('\\','/')
-
-        blenderLine = 'cd ' + blenderPath
-
-        getPath = bpy.data.filepath
-        filePath = getPath.replace('\\','/')
-
-        getPath = bpy.path.abspath('//')
-        renderFilePath = getPath.replace('\\','/')
-        renderFileName = os.path.join(renderFilePath, 'batch_render.bat')
-        renderPath = os.path.join(renderFilePath, 'render/')
-
-        commandLine = 'blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t 6'
-
-        renderfile = open(renderFileName, 'w')
-
-        renderfile.write(blenderLine)
-        renderfile.write('\n')
-        renderfile.write('blender -b "' + filePath + '" -o "' + renderPath + '" -F ' + fl_format + ' -t 6 ')
-        
-        if fr_start == fr_end:
-            renderfile.write('-f ' + fr_start)
-        else:
-            if fr_step == '1':
-                renderfile.write('-s ' + fr_start + ' -e ' + fr_end + ' -a')
-            else:
-                renderfile.write('-s ' + fr_start + ' -e ' + fr_end + ' -a -j ' + fr_step)
-
-        renderfile.close()
-        
-        bpy.ops.wm.save_mainfile()
-        
-        os.startfile(renderFilePath)
-                        
-        return{'FINISHED'}
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width = 350)
-
-    def draw(self, context):
-        layout = self.layout
-
-        scene = context.scene
-        rd = scene.render
-        image_settings = rd.image_settings
-
-        row = layout.row(align=True)
-        row.menu("RENDER_MT_presets", text=bpy.types.RENDER_MT_presets.bl_label)
-        row.menu("CYCLES_MT_sampling_presets", text=bpy.types.CYCLES_MT_sampling_presets.bl_label)
-
-        split = layout.split()
-
-        col = split.column()
-        sub = col.column(align=True)
-        sub.label(text="Resolution:")
-        row = col.row(align=True)
-        row.prop(rd, "resolution_x", text="")
-        row.prop(rd, "resolution_y", text="")
-        col.prop(rd, "resolution_percentage", text="")
-
-        col = split.column()
-        sub = col.column(align=True)
-        sub.label(text="Frame Range:")
-        row = col.row(align=True)
-        row.prop(scene, "frame_start", text="")
-        row.prop(scene, "frame_end", text="")
-        col.prop(scene, "frame_step", text="Step")
-        
-        layout.separator()
-        layout.template_image_settings(image_settings, color_management=False)
-        if rd.use_multiview:
-            layout.template_image_views(image_settings)
-        layout.separator()
-        
+# Registration
 classes = (GetLightType,
-           VIEW3D_PT_lightingToolkit,
-           SYNC_OT_Sync_Scenes,
-           EDIT_OT_OptimizeBlendFile,
            EDIT_OT_Undo,
            EDIT_OT_Redo,
            CREATE_OT_CreateLight,
            CREATE_OT_CreateLightIntoObjects,
            CREATE_OT_CreateLightFromView,
            VIEW_OT_ViewFromSelected,
-           VIEW_OT_IsolateLamps,
-           EDIT_OT_Hide,
-           EDIT_OT_Unhide,
-           EDIT_OT_CenterOrigin,
-           EDIT_OT_apply_subdivs,
-           EDIT_OT_add_subdivions,
            EDIT_OT_Rename,
+           EDIT_OT_CenterOrigin,
+           EDIT_OT_add_subdivions,
            EDIT_OT_Delete,
            EDIT_OT_Duplicate,
-           RENDER_OT_RenderSettings,
-)
-        
+           EDIT_OT_Hide,
+           EDIT_OT_Unhide)
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-        bpy.types.Scene.lamp_combo_box = bpy.props.PointerProperty(type=GetLightType)
+    bpy.types.Scene.lamp_combo_box = PointerProperty(type=GetLightType)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-        del bpy.types.Scene.lamp_combo_box
+    del bpy.types.Scene.lamp_combo_box
 
 if __name__ == '__main__':
     register()
