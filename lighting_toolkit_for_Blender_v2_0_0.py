@@ -1,8 +1,8 @@
 bl_info = {
     'name': 'Lighting Toolkit for Blender',
     'author': 'Jorge Sanchez Salcedo <jorgesanchez.da@gmail.com>',
-    'version': (2, 0, 0),
-    'blender': (4, 3, 2),
+    'version': (2, 1, 0),
+    'blender': (4, 4, 3),
     'category': 'Lighting'
 }
 
@@ -46,10 +46,8 @@ class VIEW3D_PT_lightingToolkit(Panel):
         row.label(text='Scenes:')
 
         row = layout.row()
-        row.operator('sc.sync_scenes', text='Sync scene')
-        
-        row = layout.row()
-        row.operator('sc.optimize_file', text='Optimize scene')
+        row.operator("ob.undo", text="Undo")
+        row.operator("ob.redo", text="Redo")
 
         row = layout.row()
         row.separator()
@@ -67,22 +65,32 @@ class VIEW3D_PT_lightingToolkit(Panel):
         row.operator("lt.create_light_view", text="Create light from view")
         
         row = layout.row()
-        row.operator("lamp.view_from_selected", text="View from selected")
+        row.operator("lt.view_from_selected", text="View from selected")
 
         row = layout.row()
         row.separator()
 
         row = layout.row()
         row.label(text='Objects:')
+
+        row = layout.row()
+        row.operator("ob.center_origin_object", text="Center origin to object")
+
+        row = layout.row()
+        row.operator("ob.add_subdivisions", text="Subdivide")
+
+        row = layout.row()
+        row.operator("ob.rename_object", text="Rename")
         
         row = layout.row()
-        row.operator("lt.rename_object", text="Rename")
+        row.operator("ob.delete", text="Delete")
         
         row = layout.row()
-        row.operator("lamp.delete_light", text="Delete")
-        
+        row.operator("ob.duplicate", text="Duplicate")
+
         row = layout.row()
-        row.operator("lamp.duplicate_light", text="Duplicate")
+        row.operator("ob.hide_object", text="Isolate")
+        row.operator("ob.unhide_object", text="Show all")
 
 class SYNC_OT_Sync_Scenes(Operator):
     bl_idname = 'sc.sync_scenes'
@@ -156,6 +164,46 @@ class EDIT_OT_OptimizeBlendFile(Operator):
             
         return{'FINISHED'}
 
+class EDIT_OT_ExportUSD(Operator):
+    bl_idname = 'ed.export_usd'
+    bl_label = 'Export USD'
+        
+    def execute(self, context):
+       bpy.ops.wm.usd_export(
+        root_prim_path='/root', 
+        selected_objects_only=False, 
+        visible_objects_only=True,
+        export_animation=False,
+        relative_paths=True, 
+        convert_orientation=True, 
+        export_global_forward_selection='NEGATIVE_Z',
+        export_global_up_selection='Y',
+        xform_op_mode='TRS', 
+        export_custom_properties=True, 
+        custom_properties_namespace='userProperties', 
+        author_blender_name=True,
+        )
+       
+       return{'FINISHED'}
+    
+class EDIT_OT_Undo(Operator):
+    bl_idname = 'ob.undo'
+    bl_label = 'Undo'
+        
+    def execute(self, context):
+        bpy.ops.ed.undo()
+                        
+        return{'FINISHED'}
+    
+class EDIT_OT_Redo(Operator):
+    bl_idname = 'ob.redo'
+    bl_label = 'Redo'
+        
+    def execute(self, context):
+        bpy.ops.ed.redo()
+                        
+        return{'FINISHED'}
+
 class CREATE_OT_CreateLight(Operator):
     bl_idname = 'lt.create_light'
     bl_label = 'Create Light'
@@ -167,11 +215,9 @@ class CREATE_OT_CreateLight(Operator):
         
         if new_collection in bpy.data.collections:
             new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
-            bpy.ops.object.collection_link(collection=new_collection)
         else:
             bpy.ops.collection.create(name=new_collection)
             new_light = bpy.ops.object.light_add(type=lightType, location=(0,0,0), rotation=(0,0,0))
-            bpy.ops.object.collection_link(collection=new_collection)
         
         for i in new_light:
             bpy.context.object.name = self.new_name
@@ -264,9 +310,85 @@ class CREATE_OT_CreateLightFromView(Operator):
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
+        
+class VIEW_OT_ViewFromSelected(Operator):
+    bl_idname = 'lt.view_from_selected'
+    bl_label = 'View from selected'
+    
+    def execute(self, context):
+        bpy.ops.view3d.object_as_camera()
+        bpy.context.space_data.lock_camera = False
+        
+        return {"FINISHED"}
+    
+class EDIT_OT_Hide(Operator):
+    bl_idname = 'ob.hide_object'
+    bl_label = 'Hide'
+    
+    def execute(self, context):
+        bpy.ops.object.hide_view_set(unselected=True)
+
+        return{'FINISHED'}
+
+class EDIT_OT_Unhide(Operator):
+    bl_idname = 'ob.unhide_object'
+    bl_label = 'Hide'
+    
+    def execute(self, context):
+        bpy.ops.object.hide_view_clear()
+
+        return{'FINISHED'}
+
+class EDIT_OT_CenterOrigin(Operator):
+    bl_idname = 'ob.center_origin_object'
+    bl_label = 'Hide'
+    
+    def execute(self, context):
+        bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+
+        return{'FINISHED'}
+
+class EDIT_OT_apply_subdivs(Operator):
+    bl_idname = "ob.apply_subdivs"
+    bl_label = "Apply subdivisions"
+
+    def execute(self, context):
+        selected = bpy.context.selected_objects
+        
+        for obj in selected:
+            obj = obj.name
+            object = bpy.ops.object
+            objects = bpy.data.objects
+            bpy.context.view_layer.objects.active = objects[obj]
+            try:
+                if bpy.context.object.modifiers['Subdivision'] == bpy.data.objects[obj].modifiers['Subdivision']:
+                    object.modifier_apply(modifier="Subdivision")
+                    object.shade_smooth()
+            except KeyError:
+                pass
+
+        return{'FINISHED'}
+
+class EDIT_OT_add_subdivions(Operator):
+    bl_idname = "ob.add_subdivisions"
+    bl_label = "Subdivide"
+
+    def execute(self, context):
+        selected = bpy.context.selected_objects
+        
+        for obj in selected:
+            obj = obj.name
+            object = bpy.ops.object
+            objects = bpy.data.objects
+            bpy.context.view_layer.objects.active = objects[obj]
+            object.modifier_add(type='SUBSURF')
+            object.modifier_apply(modifier="Subdivision")
+            object.shade_smooth()
+
+        return{'FINISHED'}
     
 class EDIT_OT_Rename(Operator):
-    bl_idname = 'lt.rename_object'
+    bl_idname = 'ob.rename_object'
     bl_label = 'Rename'
     new_name: StringProperty(name="Name:")
     
@@ -288,37 +410,24 @@ class EDIT_OT_Rename(Operator):
         wm = context.window_manager
         return wm.invoke_props_dialog(self)
         
-class EDIT_OT_DeleteLight(Operator):
-    bl_idname = 'lamp.delete_light'
-    bl_label = 'Delete Light'
-    bl_options = {"REGISTER", "UNDO"}
+class EDIT_OT_Delete(Operator):
+    bl_idname = 'ob.delete'
+    bl_label = 'Delete'
         
     def execute(self, context):
         bpy.ops.object.delete()
             
         return{'FINISHED'}
     
-class EDIT_OT_DuplicateLight(Operator):
-    bl_idname = 'lamp.duplicate_light'
-    bl_label = 'Duplicate Light'
-    bl_options = {"REGISTER", "UNDO"}
+class EDIT_OT_Duplicate(Operator):
+    bl_idname = 'ob.duplicate'
+    bl_label = 'Duplicate'
         
     def execute(self, context):
         bpy.ops.object.duplicate()
                         
         return{'FINISHED'}
-        
-class VIEW_OT_ViewFromSelected(Operator):
-    bl_idname = 'lamp.view_from_selected'
-    bl_label = 'View from selected'
-    bl_options = {"REGISTER", "UNDO"}
-    
-    def execute(self, context):
-        bpy.ops.view3d.object_as_camera()
-        bpy.context.space_data.lock_camera = False
-        
-        return {"FINISHED"}
-    
+  
 class VIEW_OT_IsolateLamps(Operator):
     bl_idname = 'lamp.isolate_lamps'
     bl_label = 'Isolate Lamps'
@@ -453,14 +562,23 @@ class RENDER_OT_RenderSettings(Operator):
         
 classes = (GetLightType,
            VIEW3D_PT_lightingToolkit,
+           SYNC_OT_Sync_Scenes,
+           EDIT_OT_OptimizeBlendFile,
+           EDIT_OT_Undo,
+           EDIT_OT_Redo,
            CREATE_OT_CreateLight,
            CREATE_OT_CreateLightIntoObjects,
            CREATE_OT_CreateLightFromView,
-           EDIT_OT_Rename,
-           EDIT_OT_DeleteLight,
-           EDIT_OT_DuplicateLight,
            VIEW_OT_ViewFromSelected,
            VIEW_OT_IsolateLamps,
+           EDIT_OT_Hide,
+           EDIT_OT_Unhide,
+           EDIT_OT_CenterOrigin,
+           EDIT_OT_apply_subdivs,
+           EDIT_OT_add_subdivions,
+           EDIT_OT_Rename,
+           EDIT_OT_Delete,
+           EDIT_OT_Duplicate,
            RENDER_OT_RenderSettings,
 )
         
