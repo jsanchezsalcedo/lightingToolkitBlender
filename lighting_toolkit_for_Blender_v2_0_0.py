@@ -2,13 +2,19 @@ bl_info = {
     'name': 'Lighting Toolkit for Blender',
     'author': 'Jorge Sanchez Salcedo <jorgesanchez.da@gmail.com>',
     'version': (2, 1, 0),
-    'blender': (4, 4, 3),
+    'blender': (4, 3, 0),
     'category': 'Lighting'
 }
 
 import bpy
-from bpy.props import StringProperty, EnumProperty, PointerProperty
-from bpy.types import Operator, Panel, PropertyGroup
+
+from bpy.props import (EnumProperty,
+                       StringProperty,
+                       PointerProperty)
+
+from bpy.types import (Operator,
+                       Panel,
+                       PropertyGroup)
 
 # Utility Functions
 def ensure_collection(name):
@@ -21,17 +27,16 @@ def ensure_collection(name):
 class GetLightType(PropertyGroup):
     bl_idname = 'lt.getLightType'
     bl_label = 'Get Light Type'
-    bl_description = 'Get the light type'
-    lamp_combo_box: EnumProperty(
+
+    lamp_combo_box : EnumProperty(
         name='Lights',
         items=[
             ('SUN', 'Sun', ''),
             ('AREA', 'Area', ''),
             ('POINT', 'Point', ''),
             ('SPOT', 'Spot', '')
-        ]
-    )
-
+        ])
+    
 # Panel
 class VIEW3D_PT_LightingToolkit(Panel):
     bl_label = 'Lighting Toolkit'
@@ -116,20 +121,15 @@ class EDIT_OT_Redo(Operator):
 class CREATE_OT_CreateLight(Operator):
     bl_idname = 'lt.create_light'
     bl_label = 'Create Light'
-    #new_name: StringProperty(name="Name:")
+    light_name: StringProperty(name="Name:")
 
     def execute(self, context):
-        light_type = context.scene.lamp_combo_box.lamp_combo_box
-        light_name = light_type.casefold()
-        collection = ensure_collection('Lighting')
+        light_type = bpy.context.scene.lamp_combo_box.lamp_combo_box
+        new_light = bpy.ops.object.light_add(type=light_type, location=(0, 0, 0), rotation=(0,0,0))
         
-        bpy.ops.object.light_add(type=light_type, location=(0, 0, 0))
-        
-        light = context.object
-        light.name = f"{light_name}.000"
-        light.data.name = f"{light.name}Shape"
-        
-        collection.objects.link(light)
+        for i in new_light:
+            bpy.context.object.name = self.light_name
+            bpy.context.object.data.name = self.light_name + "Shape"
 
         return {'FINISHED'}
 
@@ -141,24 +141,22 @@ class CREATE_OT_CreateLightIntoObjects(Operator):
     bl_label = 'Create Light Into Objects'
 
     def execute(self, context):
-        selected = bpy.context.selected_objects 
+        selected = bpy.context.selected_objects
         light_type = bpy.context.scene.lamp_combo_box.lamp_combo_box
-        light_name = light_type.casefold()
-        collection = ensure_collection('Lighting')
+        light_name = light_type
 
         for i in selected:
             obj_name = i.name
-            loc = i.location
+            obj_loc = i.location
+            new_light_name = obj_name + '_' + light_name.casefold() + 'Light'
 
-            bpy.ops.object.light_add(type=light_type, location=loc)
+            new_light = bpy.ops.object.light_add(type=light_type, location=obj_loc)
         
-            light = context.object
-            light.name = f"{obj_name}_{light_name}"
-            light.data.name = f"{light.name}Shape"
+            for i in new_light:
+                bpy.context.object.name = new_light_name
+                bpy.context.object.data.name = new_light_name + 'Shape'
 
-            collection.objects.link(light)  
-
-        return {"FINISHED"}
+        return {'FINISHED'}
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -166,13 +164,11 @@ class CREATE_OT_CreateLightIntoObjects(Operator):
 class CREATE_OT_CreateLightFromView(Operator):
     bl_idname = 'lt.create_light_view'
     bl_label = 'Create Light From View'
-    #new_name = bpy.props.StringProperty(name="Name:")
+    light_name: StringProperty(name="Name:")
 
     def execute(self, context):
-        light_type = context.scene.lamp_combo_box.lamp_combo_box
-        light_name = light_type.casefold()
-        collection = ensure_collection('Lighting')
-        
+        light_type = bpy.context.scene.lamp_combo_box.lamp_combo_box
+
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
                 rv3d = area.spaces[0].region_3d
@@ -181,18 +177,16 @@ class CREATE_OT_CreateLightFromView(Operator):
                     rot = (area.spaces[0].region_3d.view_rotation).to_euler()
                     dis = area.spaces[0].region_3d.view_distance
                     
-                    bpy.ops.object.light_add(type=lightType, location=loc, rotation=rot)
-        
-                    light = context.object
-                    light.name = f"{light_name}.000"
-                    light.data.name = f"{light.name}Shape"
+                    new_light = bpy.ops.object.light_add(type=light_type, location=loc, rotation=rot)
 
-                    collection.objects.link(light)  
+                    for i in new_light:
+                        bpy.context.object.name = self.light_name
+                        bpy.context.object.data.name = self.light_name + "Shape"
 
                     bpy.ops.view3d.object_as_camera()
                     bpy.context.space_data.lock_camera = True
                     
-        return {"FINISHED"}
+        return {'FINISHED'}
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -205,7 +199,7 @@ class VIEW_OT_ViewFromSelected(Operator):
         bpy.ops.view3d.object_as_camera()
         bpy.context.space_data.lock_camera = False
         
-        return {"FINISHED"}
+        return {'FINISHED'}
     
 class EDIT_OT_Rename(Operator):
     bl_idname = 'ob.rename_object'
@@ -214,7 +208,7 @@ class EDIT_OT_Rename(Operator):
     
     def execute(self, context):
         selected = bpy.context.selected_objects
-        #self.report({'INFO'}, new_name)
+        #self.report({'INFO'}, self.new_name)
 
         for i in selected:
             obj_name = i.name
@@ -222,8 +216,8 @@ class EDIT_OT_Rename(Operator):
 
             bpy.context.view_layer.objects.active = object
             obj = bpy.context.object
-            obj.name = f"{self.new_name}.000"
-            obj.data.name = f"{obj.name}Shape"
+            obj.name = self.new_name + ".000"
+            obj.data.name = obj.name + "Shape"
 
         return{'FINISHED'}
     
@@ -297,6 +291,7 @@ class EDIT_OT_Unhide(Operator):
 
 # Registration
 classes = (GetLightType,
+           VIEW3D_PT_LightingToolkit,
            EDIT_OT_Undo,
            EDIT_OT_Redo,
            CREATE_OT_CreateLight,
@@ -314,12 +309,12 @@ classes = (GetLightType,
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.lamp_combo_box = PointerProperty(type=GetLightType)
+        bpy.types.Scene.lamp_combo_box = bpy.props.PointerProperty(type=GetLightType)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.lamp_combo_box
+        del bpy.types.Scene.lamp_combo_box
 
 if __name__ == '__main__':
     register()
